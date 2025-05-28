@@ -1,13 +1,13 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from datetime import datetime, timedelta
+from pydantic import BaseModel
+from datetime import datetime
 import sqlite3
 
 app = FastAPI()
 
 DB_PATH = "db.sqlite3"
 
-# Используем твой список чекпоинтов
 CHECKPOINTS = [
     (10*60, "10 минут", "Уровень кислорода в крови начинает повышаться."),
     (30*60, "30 минут", "Пульс начинает приходить в норму."),
@@ -51,10 +51,12 @@ def init_db():
 
 init_db()
 
+class UserIdRequest(BaseModel):
+    user_id: int
+
 @app.post("/start")
-async def start_timer(request: Request):
-    data = await request.json()
-    user_id = data.get("user_id")
+async def start_timer(request: UserIdRequest):
+    user_id = request.user_id
     now = datetime.utcnow().isoformat()
     with sqlite3.connect(DB_PATH) as conn:
         c = conn.cursor()
@@ -63,9 +65,8 @@ async def start_timer(request: Request):
     return JSONResponse({"ok": True, "started_at": now})
 
 @app.post("/reset")
-async def reset_timer(request: Request):
-    data = await request.json()
-    user_id = data.get("user_id")
+async def reset_timer(request: UserIdRequest):
+    user_id = request.user_id
     now = datetime.utcnow().isoformat()
     with sqlite3.connect(DB_PATH) as conn:
         c = conn.cursor()
